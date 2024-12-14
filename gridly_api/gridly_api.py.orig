@@ -1,0 +1,79 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import os
+import requests
+import csv
+import json
+import logging
+from io import StringIO
+from dotenv import load_dotenv
+
+log = logging.getLogger(__name__)
+load_dotenv()
+
+
+class Gridly:
+
+    URL = "https://eu-central-1.api.gridly.com"
+
+    def __init__(self):
+        api_key = os.environ('GRIDLY_API_KEY')
+        self.__init__(api_key)
+
+    def __init__(self, api_key):
+        self.AUTH = f"ApiKey {api_key}"
+
+    def export(self):
+        view_id = os.environ('GRIDLY_VIEW_ID')
+        return self.export(view_id)
+
+    def export(self, view_id):
+        url = f"{Gridly.URL}/v1/views/{view_id}/export?fileHeader=columnId"
+        web_csv = requests.get(url, headers={'Authorization': self.AUTH})
+        f = StringIO(web_csv.text)
+        csv_content = csv.reader(f, delimiter=',')
+
+        for row in csv_content:
+            langs = row[1:]
+            break
+
+        trans = {}
+        for lang in langs:
+            trans[lang] = {}
+
+        for row_index, row in enumerate(csv_content):
+            for l_index, lang in enumerate(langs):
+                trans[lang][row[0]] = row[l_index + 1].replace("\n", "\\\n")
+
+        return trans
+
+    def import_from_csv(self):
+        view_id = os.environ('GRIDLY_VIEW_ID')
+        return self.add_from_csv(view_id)
+
+    def import_from_csv(self, view_id, csv_file_name):
+        url = f"{Gridly.URL}/v1/views/{view_id}/records"
+
+        records = []
+
+        with open(csv_file_name, newline='') as csvfile:
+            csv_content = csv.reader(csvfile, delimiter=';')
+
+            for row in csv_content:
+                records.append({
+                    "id": row[0],
+                    "cells": [
+                        {
+                            "columnId": "uk",
+                            "value": row[1],
+                            "dependencyStatus": "outOfDate"
+                        }
+                    ]
+                })
+
+        data = json.dumps(records)
+        log.debug("Request = {}", data)
+        response = requests.post(url, headers={'Authorization': self.AUTH, "Content-Type": "application/json"}, data=data)
+        log.debug("Response: {}", response)
+        log.debug(response.json())
