@@ -14,8 +14,8 @@ load_dotenv()
 
 
 __URL__ = "https://eu-central-1.api.gridly.com"
-__AUTH__ = f"ApiKey {os.environ['GRIDLY_API_KEY']}"
-__VIEW_ID__ = os.environ['GRIDLY_VIEW_ID']
+__AUTH__ = f"ApiKey {os.getenv('GRIDLY_API_KEY')}"
+__VIEW_ID__ = os.getenv('GRIDLY_VIEW_ID')
 
 def export():
     url = f"{__URL__}/v1/views/{__VIEW_ID__}/export?fileHeader=columnId"
